@@ -7,7 +7,6 @@
 
 namespace Automattic\Jetpack;
 
-use Automattic\Jetpack\Connection\Manager;
 use Automattic\Jetpack\A8c_Mc_Stats;
 
 /**
@@ -67,6 +66,10 @@ class Heartbeat {
 		}
 
 		add_filter( 'jetpack_xmlrpc_methods', array( __CLASS__, 'jetpack_xmlrpc_methods' ) );
+
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::add_command( 'jetpack heartbeat', array( $this, 'cli_callback' ) );
+		}
 	}
 
 	/**
@@ -193,6 +196,49 @@ class Heartbeat {
 
 		$timestamp = wp_next_scheduled( $this->cron_name );
 		wp_unschedule_event( $timestamp, $this->cron_name );
+	}
+
+	/**
+	 * Interact with the Heartbeat
+	 *
+	 * ## OPTIONS
+	 *
+	 * inspect (default): Gets the list of data that is going to be sent in the heartbeat and the date/time of the last heartbeat
+	 *
+	 * @param array $args Arguments passed via CLI.
+	 *
+	 * @return void
+	 */
+	public function cli_callback( $args ) {
+
+		$allowed_args = array(
+			'inspect',
+		);
+
+		if ( isset( $args[0] ) && ! in_array( $args[0], $allowed_args, true ) ) {
+			/* translators: %s is a command like "prompt" */
+			\WP_CLI::error( sprintf( __( '%s is not a valid command.', 'jetpack' ), $args[0] ) );
+		}
+
+		$stats           = self::generate_stats_array();
+		$formatted_stats = array();
+
+		foreach ( $stats as $stat_name => $bin ) {
+			$formatted_stats[] = array(
+				'Stat name' => $stat_name,
+				'Bin'       => $bin,
+			);
+		}
+
+		\WP_CLI\Utils\format_items( 'table', $formatted_stats, array( 'Stat name', 'Bin' ) );
+
+		$last_heartbeat = \Jetpack_Options::get_option( 'last_heartbeat' );
+
+		if ( $last_heartbeat ) {
+			$last_date = gmdate( 'Y-m-d H:i:s', $last_heartbeat );
+			/* translators: %s is the full datetime of the last heart beat e.g. 2020-01-01 12:21:23 */
+			\WP_CLI::line( sprintf( __( 'Last heartbeat sent at: %s', 'jetpack' ), $last_date ) );
+		}
 	}
 
 }
