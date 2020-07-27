@@ -68,7 +68,7 @@ class Heartbeat {
 		add_filter( 'jetpack_xmlrpc_methods', array( __CLASS__, 'jetpack_xmlrpc_methods' ) );
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			\WP_CLI::add_command( 'jetpack heartbeat', array( $this, 'cli_callback' ) );
+			\WP_CLI::add_command( 'jetpack-heartbeat', array( $this, 'cli_callback' ) );
 		}
 	}
 
